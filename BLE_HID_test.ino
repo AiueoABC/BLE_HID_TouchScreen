@@ -7,39 +7,171 @@
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEServer.h>
+#include "BLE2902.h"
+#include "BLEHIDDevice.h"
+#include "HIDTypes.h"
 
 // See the following for generating UUIDs:
 // https://www.uuidgenerator.net/
 
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+#define LSB(_x) ((_x) & 0xFF)
+#define MSB(_x) ((_x) >> 8)
+
+BLEHIDDevice* hid;
+BLECharacteristic* input;
+BLECharacteristic* output;
+bool connected = false;
+int screenX0 = 0;
+int screenY0 = 0;
+int screenX1 = 1000;
+int screenY1 = 1000;
+int logicalMinX = 0;
+int logicalMinY = 0;
+int logicalMaxX = 32767;
+int logicalMaxY = 32767;
+int logicalX, logicalY;
+uint8_t _switch = 1;
+
+class MyCallbacks : public BLEServerCallbacks {
+    void onConnect(BLEServer* pServer) {
+      connected = true;
+      BLE2902* desc = (BLE2902*)input->getDescriptorByUUID(BLEUUID((uint16_t)0x2902));
+      desc->setNotifications(true);
+    }
+
+    void onDisconnect(BLEServer* pServer) {
+      connected = false;
+      BLE2902* desc = (BLE2902*)input->getDescriptorByUUID(BLEUUID((uint16_t)0x2902));
+      desc->setNotifications(false);
+    }
+};
 
 void setup() {
   Serial.begin(115200);
   Serial.println("Starting BLE work!");
 
-  BLEDevice::init("Long name works now");
+  BLEDevice::init("TestTestAiueo");
   BLEServer *pServer = BLEDevice::createServer();
-  BLEService *pService = pServer->createService(SERVICE_UUID);
-  BLECharacteristic *pCharacteristic = pService->createCharacteristic(
-                                         CHARACTERISTIC_UUID,
-                                         BLECharacteristic::PROPERTY_READ |
-                                         BLECharacteristic::PROPERTY_WRITE
-                                       );
+  pServer->setCallbacks(new MyCallbacks());
 
-  pCharacteristic->setValue("Hello World says Neil");
-  pService->start();
-  // BLEAdvertising *pAdvertising = pServer->getAdvertising();  // this still is working for backward compatibility
+  hid = new BLEHIDDevice(pServer);
+  input = hid->inputReport(4); // <-- input REPORTID from report map
+//  output = hid->outputReport(4); // <-- output REPORTID from report map
+  //  output->setCallbacks(new MyOutputCallbacks());
+
+  std::string name = "ElectronicAiueo";
+  hid->manufacturer()->setValue(name);
+
+  hid->pnp(0x01, 0x0430, 0x0508, 0x00); //pnp(uint8_t sig, uint16_t vid, uint16_t pid, uint16_t version)
+  hid->hidInfo(0x00, 0x01); //hidInfo(uint8_t country, uint8_t flags)
+
+  BLESecurity *pSecurity = new BLESecurity();
+  //  pSecurity->setKeySize();
+  pSecurity->setAuthenticationMode(ESP_LE_AUTH_BOND);
+
+  const uint8_t report[] = {
+    0x05, 0x0d,                         // USAGE_PAGE (Digitizers)
+    0x09, 0x04,                         // USAGE (Touch Screen)0x09, 0x02,                         // USAGE (Pen)
+    0xa1, 0x01,                         // COLLECTION (Application)
+    0x85, 0x04,                         //   REPORT_ID (4)
+    0x09, 0x22,                         //   USAGE (Finger)0x09, 0x20,                         //   USAGE (Stylus)
+    0xa1, 0x00,                         //   COLLECTION (Physical)
+    0x09, 0x42,                         //     USAGE (Tip Switch)
+    // 0x09, 0x44,                         //     USAGE (Barrel Switch)
+    // 0x09, 0x45,                         //     USAGE (Eraser Switch)
+    // 0x09, 0x3c,                         //     USAGE (Invert)
+    // 0x09, 0x32,                         //     USAGE (In Range)
+    0x09, 0x51,                         //     USAGE (Contact Identifier) *added line
+    0x15, 0x00,                         //     LOGICAL_MINIMUM (0)
+    0x25, 0x01,                         //     LOGICAL_MAXIMUM (1)
+    0x75, 0x01,                         //     REPORT_SIZE (1)
+    0x95, 0x02,                         //     REPORT_COUNT (2)0x95, 0x05,                         //     REPORT_COUNT (5)
+    0x81, 0x02,                         //     INPUT (Data,Var,Abs)
+    0x95, 0x0e,                         //     REPORT_COUNT (14)0x95, 0x0b,                         //     REPORT_COUNT (11)
+    0x81, 0x03,                         //     INPUT (Cnst,Var,Abs)
+    0x05, 0x01,                         //     USAGE_PAGE (Generic Desktop)
+    0x75, 0x10,                         //     REPORT_SIZE (16)
+    0x95, 0x01,                         //     REPORT_COUNT (1)
+    0x55, 0x0d,                         //     UNIT_EXPONENT (-3)
+    0x65, 0x33,                         //     UNIT (Inch,EngLinear)
+    0x15, 0x00,                         //     LOGICAL_MINIMUM (0)
+    0x26, 0xff, 0x7f,                   //     LOGICAL_MAXIMUM (32767)
+    0x09, 0x30,                         //     USAGE (X)
+    0x81, 0x02,                         //     INPUT (Data,Var,Abs)
+    0x09, 0x31,                         //     USAGE (Y)
+    0x81, 0x02,                         //     INPUT (Data,Var,Abs)
+    0xc0,                               //   END_COLLECTION
+    0xc0,                               // END_COLLECTION
+  };
+
+  hid->reportMap((uint8_t*)report, sizeof(report));
+  hid->startServices();
+
+    BLEService *pService = pServer->createService(SERVICE_UUID);
+    BLECharacteristic *pCharacteristic = pService->createCharacteristic(
+                                           CHARACTERISTIC_UUID,
+                                           BLECharacteristic::PROPERTY_READ |
+                                           BLECharacteristic::PROPERTY_WRITE
+                                         );
+  
+    pCharacteristic->setValue("Hello World says Neil");
+    pService->start();
+//   BLEAdvertising *pAdvertising = pServer->getAdvertising();  // this still is working for backward compatibility
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
-  pAdvertising->addServiceUUID(SERVICE_UUID);
+  pAdvertising->setAppearance(HID_TABLET);
+    pAdvertising->addServiceUUID(SERVICE_UUID);
+//  pAdvertising->addServiceUUID(hid->hidService()->getUUID());
   pAdvertising->setScanResponse(true);
   pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
   pAdvertising->setMinPreferred(0x12);
+
   BLEDevice::startAdvertising();
-  Serial.println("Characteristic defined! Now you can read it in your phone!");
+
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  delay(2000);
+  if (connected) {
+    if (Serial.available() > 0) {
+      String func;
+      int x;
+      int y;
+      //      int c;
+      func = Serial.readStringUntil(';');
+      x = func.substring(0, 4).toInt();
+      y = func.substring(4, 8).toInt();
+      //      c = func.substring(8).toInt();
+      Serial.println(x);
+      Serial.println(y);
+      //      Serial.println(c);
+      if (screenX0 < x and x <= screenX1) {
+        if (screenY0 < y and y <= screenY1) {
+          send(x, y);
+        } else {
+          Serial.println("y-value: out of range");
+        }
+      } else {
+        Serial.println("x-value: out of range");
+      }
+
+    }
+  }
+}
+
+void send(int paramX, int paramY) {
+  logicalX = map(paramX, screenX0, screenX1, logicalMinX, logicalMaxX);
+  logicalY = map(paramY, screenY0, screenY1, logicalMinY, logicalMaxY);
+  uint8_t m[6];
+  m[0] = _switch | _switch;//  m[0] = 0x10 | _switch;
+  m[1] = 0;
+  m[2] = LSB(logicalX);
+  m[3] = MSB(logicalX);
+  m[4] = LSB(logicalY);
+  m[5] = MSB(logicalY);
+  input->setValue(m, 6);
+  input->notify();
+//  output->setValue(m, 6);
+//  output->notify();
 }
