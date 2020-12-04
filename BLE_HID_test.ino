@@ -104,19 +104,19 @@ void setup() {
   hid->reportMap((uint8_t*)report, sizeof(report));
   hid->startServices();
 
-    BLEService *pService = pServer->createService(SERVICE_UUID);
-    BLECharacteristic *pCharacteristic = pService->createCharacteristic(
-                                           CHARACTERISTIC_UUID,
-                                           BLECharacteristic::PROPERTY_READ |
-                                           BLECharacteristic::PROPERTY_WRITE
-                                         );
-  
-    pCharacteristic->setValue("Hello World says Neil");
-    pService->start();
-//   BLEAdvertising *pAdvertising = pServer->getAdvertising();  // this still is working for backward compatibility
+  BLEService *pService = pServer->createService(SERVICE_UUID);
+  BLECharacteristic *pCharacteristic = pService->createCharacteristic(
+                                         CHARACTERISTIC_UUID,
+                                         BLECharacteristic::PROPERTY_READ |
+                                         BLECharacteristic::PROPERTY_WRITE
+                                       );
+
+  pCharacteristic->setValue("Hello World says Neil");
+  pService->start();
+  //   BLEAdvertising *pAdvertising = pServer->getAdvertising();  // this still is working for backward compatibility
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->setAppearance(HID_TABLET);
-    pAdvertising->addServiceUUID(SERVICE_UUID);
+  pAdvertising->addServiceUUID(SERVICE_UUID);
 
   pAdvertising->setScanResponse(true);
   pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
@@ -133,22 +133,24 @@ void loop() {
       String func;
       int x;
       int y;
-//      int c;
+      int s;
+      int c;
       func = Serial.readStringUntil(';');
       x = func.substring(0, 4).toInt();
       y = func.substring(4, 8).toInt();
-//      c = func.substring(8).toInt();
+      s = func.substring(8).toInt();
+      c = func.substring(9).toInt();
       Serial.println(x);
       Serial.println(y);
-//      Serial.println(c);
+      Serial.println(s);
+      Serial.println(c);
       if (screenX0 < x and x <= screenX1) {
         if (screenY0 < y and y <= screenY1) {
-          send(x, y, 1);
-          delay(10);
-          send(x, y, 0);
-//          if (c==0 or c==1){
-//          send(x, y, c);
-//          }
+          if (c == 0 or c == 1) {
+            if (s == 0 or s == 1) {
+              send_multi(x, y, s, c);
+            }
+          }
         } else {
           Serial.println("y-value: out of range");
         }
@@ -165,6 +167,32 @@ void send(int paramX, int paramY, int _switch) {
   logicalY = map(paramY, screenY0, screenY1, logicalMinY, logicalMaxY);
   uint8_t m[6];
   m[0] = _switch | _switch;//  m[0] = 0x10 | _switch;
+  m[1] = 0;
+  m[2] = LSB(logicalX);
+  m[3] = MSB(logicalX);
+  m[4] = LSB(logicalY);
+  m[5] = MSB(logicalY);
+  input->setValue(m, 6);
+  input->notify();
+}
+
+void send_multi(int paramX, int paramY, int _switch, int _cid) {
+  logicalX = map(paramX, screenX0, screenX1, logicalMinX, logicalMaxX);
+  logicalY = map(paramY, screenY0, screenY1, logicalMinY, logicalMaxY);
+  uint8_t m[6];
+  if (_switch == 1) {
+    if (_cid == 0) {
+      m[0] = 0x01;
+    } else if (_cid == 1) {
+      m[0] = 0x03;
+    }
+  } else if (_switch == 0) {
+    if (_cid == 0) {
+      m[0] = 0x00;
+    } else if (_cid == 1) {
+      m[0] = 0x02;
+    }
+  }
   m[1] = 0;
   m[2] = LSB(logicalX);
   m[3] = MSB(logicalX);
