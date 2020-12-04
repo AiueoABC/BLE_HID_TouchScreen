@@ -138,13 +138,17 @@ void loop() {
       func = Serial.readStringUntil(';');
       x = func.substring(0, 4).toInt();
       y = func.substring(4, 8).toInt();
-      s = func.substring(8).toInt();
+      s = func.substring(8, 9).toInt();
       c = func.substring(9).toInt();
       Serial.println(x);
       Serial.println(y);
       Serial.println(s);
       Serial.println(c);
-      if (screenX0 < x and x <= screenX1) {
+      if (s == 2 and c == 2) {
+        zoomin(x, y);
+      } else if (s == 3 and c == 3) {
+        zoomout(x, y);
+      } else if (screenX0 < x and x <= screenX1) {
         if (screenY0 < y and y <= screenY1) {
           if (c == 0 or c == 1) {
             if (s == 0 or s == 1) {
@@ -200,4 +204,57 @@ void send_multi(int paramX, int paramY, int _switch, int _cid) {
   m[5] = MSB(logicalY);
   input->setValue(m, 6);
   input->notify();
+}
+void zoomin(int paramX, int paramY) {
+  if (screenX0 < paramX and paramX <= screenX1) {
+    if (screenY0 < paramY and paramY <= screenY1) {
+      int x0, x1;
+      for (int i = 0; i < 100; i++) {
+
+        x0 = paramX - i*2 -100;
+        x1 = paramX + i*2 +100;
+        if (x0 < screenX0) {
+          x0 = screenX0;
+        }
+        if (x1 > screenX1) {
+          x1 = screenX1;
+        }
+        send_multi(x0, paramY, 1, 0);
+        send_multi(x1, paramY, 1, 1);
+      }
+      send_multi(x0, paramY, 0, 0);
+      send_multi(x1, paramY, 0, 1);
+    } else {
+      Serial.println("y-value: out of range");
+    }
+  } else {
+    Serial.println("x-value: out of range");
+  }
+}
+void zoomout(int paramX, int paramY) {
+  if (screenX0 < paramX and paramX <= screenX1) {
+    if (screenY0 < paramY and paramY <= screenY1) {
+      int x0, x1;
+      for (int i = 0; i < 100; i++) {
+
+        x0 = paramX + i*2 - 200;
+        x1 = paramX - i*2 + 200;
+        if (x0 < screenX0) {
+          x0 = screenX0;
+        }
+        if (x1 > screenX1) {
+          x1 = screenX1;
+        }
+        send_multi(x0, paramY, 1, 0);
+        send_multi(x1, paramY, 1, 1);
+      }
+      delay(5);
+      send_multi(x0, paramY, 0, 0);
+      send_multi(x1, paramY, 0, 1);
+    } else {
+      Serial.println("y-value: out of range");
+    }
+  } else {
+    Serial.println("x-value: out of range");
+  }
 }
