@@ -1,4 +1,5 @@
 /*
+    This code makes esp32 as TouchScreen
     Based on Neil Kolban example for IDF: https://github.com/nkolban/esp32-snippets/blob/master/cpp_utils/tests/BLE%20Tests/SampleServer.cpp
     Ported to Arduino ESP32 by Evandro Copercini
     updates by chegewara
@@ -32,7 +33,7 @@ int logicalMinY = 0;
 int logicalMaxX = 32767;
 int logicalMaxY = 32767;
 int logicalX, logicalY;
-uint8_t _switch = 1;
+//uint8_t _switch = 1;
 
 class MyCallbacks : public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
@@ -132,17 +133,22 @@ void loop() {
       String func;
       int x;
       int y;
-      //      int c;
+//      int c;
       func = Serial.readStringUntil(';');
       x = func.substring(0, 4).toInt();
       y = func.substring(4, 8).toInt();
-      //      c = func.substring(8).toInt();
+//      c = func.substring(8).toInt();
       Serial.println(x);
       Serial.println(y);
-      //      Serial.println(c);
+//      Serial.println(c);
       if (screenX0 < x and x <= screenX1) {
         if (screenY0 < y and y <= screenY1) {
-          send(x, y);
+          send(x, y, 1);
+          delay(10);
+          send(x, y, 0);
+//          if (c==0 or c==1){
+//          send(x, y, c);
+//          }
         } else {
           Serial.println("y-value: out of range");
         }
@@ -154,7 +160,7 @@ void loop() {
   }
 }
 
-void send(int paramX, int paramY) {
+void send(int paramX, int paramY, int _switch) {
   logicalX = map(paramX, screenX0, screenX1, logicalMinX, logicalMaxX);
   logicalY = map(paramY, screenY0, screenY1, logicalMinY, logicalMaxY);
   uint8_t m[6];
