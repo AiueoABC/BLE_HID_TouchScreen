@@ -58,8 +58,6 @@ void setup() {
 
   hid = new BLEHIDDevice(pServer);
   input = hid->inputReport(4); // <-- input REPORTID from report map
-//  output = hid->outputReport(4); // <-- output REPORTID from report map
-  //  output->setCallbacks(new MyOutputCallbacks());
 
   std::string name = "ElectronicAiueo";
   hid->manufacturer()->setValue(name);
@@ -73,23 +71,19 @@ void setup() {
 
   const uint8_t report[] = {
     0x05, 0x0d,                         // USAGE_PAGE (Digitizers)
-    0x09, 0x04,                         // USAGE (Touch Screen)0x09, 0x02,                         // USAGE (Pen)
+    0x09, 0x04,                         // USAGE (Touch Screen)
     0xa1, 0x01,                         // COLLECTION (Application)
     0x85, 0x04,                         //   REPORT_ID (4)
-    0x09, 0x22,                         //   USAGE (Finger)0x09, 0x20,                         //   USAGE (Stylus)
+    0x09, 0x22,                         //   USAGE (Finger)
     0xa1, 0x00,                         //   COLLECTION (Physical)
     0x09, 0x42,                         //     USAGE (Tip Switch)
-    // 0x09, 0x44,                         //     USAGE (Barrel Switch)
-    // 0x09, 0x45,                         //     USAGE (Eraser Switch)
-    // 0x09, 0x3c,                         //     USAGE (Invert)
-    // 0x09, 0x32,                         //     USAGE (In Range)
     0x09, 0x51,                         //     USAGE (Contact Identifier) *added line
     0x15, 0x00,                         //     LOGICAL_MINIMUM (0)
     0x25, 0x01,                         //     LOGICAL_MAXIMUM (1)
     0x75, 0x01,                         //     REPORT_SIZE (1)
-    0x95, 0x02,                         //     REPORT_COUNT (2)0x95, 0x05,                         //     REPORT_COUNT (5)
+    0x95, 0x02,                         //     REPORT_COUNT (2)
     0x81, 0x02,                         //     INPUT (Data,Var,Abs)
-    0x95, 0x0e,                         //     REPORT_COUNT (14)0x95, 0x0b,                         //     REPORT_COUNT (11)
+    0x95, 0x0e,                         //     REPORT_COUNT (14)
     0x81, 0x03,                         //     INPUT (Cnst,Var,Abs)
     0x05, 0x01,                         //     USAGE_PAGE (Generic Desktop)
     0x75, 0x10,                         //     REPORT_SIZE (16)
@@ -122,7 +116,7 @@ void setup() {
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->setAppearance(HID_TABLET);
     pAdvertising->addServiceUUID(SERVICE_UUID);
-//  pAdvertising->addServiceUUID(hid->hidService()->getUUID());
+
   pAdvertising->setScanResponse(true);
   pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
   pAdvertising->setMinPreferred(0x12);
@@ -172,6 +166,4 @@ void send(int paramX, int paramY) {
   m[5] = MSB(logicalY);
   input->setValue(m, 6);
   input->notify();
-//  output->setValue(m, 6);
-//  output->notify();
 }
