@@ -72,10 +72,10 @@ void setup() {
 
   const uint8_t report[] = {
     0x05, 0x0d,                         // USAGE_PAGE (Digitizers)
-    0x09, 0x04,                         // USAGE (Touch Screen)
+    0x09, 0x02,                         // USAGE (Pen) 
     0xa1, 0x01,                         // COLLECTION (Application)
     0x85, 0x04,                         //   REPORT_ID (4)
-    0x09, 0x22,                         //   USAGE (Finger)
+    0x09, 0x20,                         //   USAGE (Stylus)
     0xa1, 0x00,                         //   COLLECTION (Physical)
     0x09, 0x42,                         //     USAGE (Tip Switch)
     0x09, 0x51,                         //     USAGE (Contact Identifier) *added line
