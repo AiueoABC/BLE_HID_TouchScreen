@@ -162,9 +162,28 @@ void loop() {
         Serial.println("x-value: out of range");
       }
 
+    } else {
+      delay(500);
+      send_null();
+      Serial.println("Clearing Touch");
+      }
+  } else{
+    Serial.println("Waiting for Connection");
+    delay(500);
     }
-  }
 }
+
+void send_null() {
+  uint8_t m[6];
+  m[0] = 0;
+  m[1] = 0;
+  m[2] = 0;
+  m[3] = 0;
+  m[4] = 0;
+  m[5] = 0;
+  input->setValue(m, 6);
+  input->notify();
+  }
 
 void send(int paramX, int paramY, int _switch) {
   logicalX = map(paramX, screenX0, screenX1, logicalMinX, logicalMaxX);
