@@ -93,7 +93,7 @@ void setup() {
     // contactID
     0x09, 0x51,                         //     USAGE (Contact Identifier) *added line
     0x15, 0x00,                         //     LOGICAL_MINIMUM (0)
-    0x25, 0x01,                         //     LOGICAL_MAXIMUM (9)
+    0x25, 0x09,                         //     LOGICAL_MAXIMUM (9)
     0x75, 0x01,                         //     REPORT_SIZE (1)
     0x95, 0x01,                         //     REPORT_COUNT (1)
     0x81, 0x02,                         //     INPUT (Data,Var,Abs)
